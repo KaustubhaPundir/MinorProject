@@ -1,0 +1,192 @@
+[
+  {
+    "skill": "ask-matt",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "chief-of-staff",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "claude-handoff",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "code-review",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "codebase-design",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "diagnosing-bugs",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "domain-modeling",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "git-guardrails-claude-code",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "grill-me",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "grill-with-docs",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "grilling",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "handoff",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "implement",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "implement-spec",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "improve-codebase-architecture",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "loop-me",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "migrate-to-shoehorn",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "pr",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "prototype",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "research",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "retro",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "scaffold-exercises",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "setup-matt-pocock-skills",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "setup-pre-commit",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "setup-ts-deep-modules",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "tdd",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "teach",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "to-questionnaire",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "to-spec",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "to-tickets",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "triage",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "wait-what",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "wayfinder",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "wizard",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "writing-beats",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "writing-for-agents",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "writing-fragments",
+    "passed": true,
+    "result": "Skill is valid!"
+  },
+  {
+    "skill": "writing-shape",
+    "passed": true,
+    "result": "Skill is valid!"
+  }
+]

@@ -1,0 +1,34 @@
+schema_version: 1
+program:
+  source: legacy.cbl
+  source_format: free
+  compiler_flags: [-Wall]
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs: []
+  outputs: [report.dat]
+  args: []
+  environment:
+    LANG: C
+    TZ: UTC
+  network_profile: disabled
+input_domain:
+  description: This batch program consumes no input records.
+  encoding: ascii
+  constraints:
+    - No arguments, stdin, or input files are supplied.
+  reviewed: true
+toolchains:
+  cobol:
+    image: dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.2.0
+  python:
+    image: python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: ollama
+  endpoint: http://127.0.0.1:11434
+  model: qwen3.8:27b
+  maximum_attempts: 5

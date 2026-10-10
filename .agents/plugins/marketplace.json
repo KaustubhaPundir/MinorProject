@@ -1,0 +1,20 @@
+{
+  "name": "matt-pocock-local",
+  "interface": {
+    "displayName": "Matt Pocock Local Skills"
+  },
+  "plugins": [
+    {
+      "name": "matt-pocock-all-skills",
+      "source": {
+        "source": "local",
+        "path": "./plugins/matt-pocock-all-skills"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "matt-pocock-all-skills",
+  "version": "1.0.0",
+  "description": "Unofficial complete snapshot of Matt Pocock's skills, including miscellaneous and experimental workflows.",
+  "skills": "./skills/"
+}

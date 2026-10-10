@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legacy-diff"
+version = "0.1.0"
+description = "Check reproducible COBOL-to-Python differential execution plans"
+requires-python = ">=3.11"
+dependencies = ["PyYAML==6.0.2"]
+
+[project.scripts]
+legacy-diff = "legacy_diff.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["legacy_diff*"]

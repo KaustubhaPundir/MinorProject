@@ -1,0 +1,16 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "matt-pocock-all-skills",
+  "version": "1.0.0",
+  "description": "Unofficial complete snapshot of Matt Pocock's skills, including miscellaneous and experimental workflows.",
+  "license": "MIT",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Matt Pocock All Skills (Unofficial)",
+        "shortDescription": "Engineering, productivity and experimental skills"
+      },
+      "onboardingSkill": "./skills/setup-matt-pocock-skills/SKILL.md"
+    }
+  }
+}

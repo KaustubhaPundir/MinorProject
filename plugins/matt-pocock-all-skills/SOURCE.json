@@ -1,0 +1,196 @@
+{
+  "repository": "https://github.com/mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "skills": [
+    {
+      "name": "ask-matt",
+      "bucket": "engineering",
+      "source": "skills/engineering/ask-matt/SKILL.md"
+    },
+    {
+      "name": "code-review",
+      "bucket": "engineering",
+      "source": "skills/engineering/code-review/SKILL.md"
+    },
+    {
+      "name": "codebase-design",
+      "bucket": "engineering",
+      "source": "skills/engineering/codebase-design/SKILL.md"
+    },
+    {
+      "name": "diagnosing-bugs",
+      "bucket": "engineering",
+      "source": "skills/engineering/diagnosing-bugs/SKILL.md"
+    },
+    {
+      "name": "domain-modeling",
+      "bucket": "engineering",
+      "source": "skills/engineering/domain-modeling/SKILL.md"
+    },
+    {
+      "name": "grill-with-docs",
+      "bucket": "engineering",
+      "source": "skills/engineering/grill-with-docs/SKILL.md"
+    },
+    {
+      "name": "implement",
+      "bucket": "engineering",
+      "source": "skills/engineering/implement/SKILL.md"
+    },
+    {
+      "name": "implement-spec",
+      "bucket": "engineering",
+      "source": "skills/engineering/implement-spec/SKILL.md"
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "bucket": "engineering",
+      "source": "skills/engineering/improve-codebase-architecture/SKILL.md"
+    },
+    {
+      "name": "pr",
+      "bucket": "engineering",
+      "source": "skills/engineering/pr/SKILL.md"
+    },
+    {
+      "name": "prototype",
+      "bucket": "engineering",
+      "source": "skills/engineering/prototype/SKILL.md"
+    },
+    {
+      "name": "research",
+      "bucket": "engineering",
+      "source": "skills/engineering/research/SKILL.md"
+    },
+    {
+      "name": "retro",
+      "bucket": "engineering",
+      "source": "skills/engineering/retro/SKILL.md"
+    },
+    {
+      "name": "setup-matt-pocock-skills",
+      "bucket": "engineering",
+      "source": "skills/engineering/setup-matt-pocock-skills/SKILL.md"
+    },
+    {
+      "name": "tdd",
+      "bucket": "engineering",
+      "source": "skills/engineering/tdd/SKILL.md"
+    },
+    {
+      "name": "to-spec",
+      "bucket": "engineering",
+      "source": "skills/engineering/to-spec/SKILL.md"
+    },
+    {
+      "name": "to-tickets",
+      "bucket": "engineering",
+      "source": "skills/engineering/to-tickets/SKILL.md"
+    },
+    {
+      "name": "triage",
+      "bucket": "engineering",
+      "source": "skills/engineering/triage/SKILL.md"
+    },
+    {
+      "name": "wayfinder",
+      "bucket": "engineering",
+      "source": "skills/engineering/wayfinder/SKILL.md"
+    },
+    {
+      "name": "wizard",
+      "bucket": "engineering",
+      "source": "skills/engineering/wizard/SKILL.md"
+    },
+    {
+      "name": "chief-of-staff",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/chief-of-staff/SKILL.md"
+    },
+    {
+      "name": "claude-handoff",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/claude-handoff/SKILL.md"
+    },
+    {
+      "name": "loop-me",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/loop-me/SKILL.md"
+    },
+    {
+      "name": "setup-ts-deep-modules",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/setup-ts-deep-modules/SKILL.md"
+    },
+    {
+      "name": "writing-beats",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/writing-beats/SKILL.md"
+    },
+    {
+      "name": "writing-fragments",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/writing-fragments/SKILL.md"
+    },
+    {
+      "name": "writing-shape",
+      "bucket": "in-progress",
+      "source": "skills/in-progress/writing-shape/SKILL.md"
+    },
+    {
+      "name": "git-guardrails-claude-code",
+      "bucket": "misc",
+      "source": "skills/misc/git-guardrails-claude-code/SKILL.md"
+    },
+    {
+      "name": "migrate-to-shoehorn",
+      "bucket": "misc",
+      "source": "skills/misc/migrate-to-shoehorn/SKILL.md"
+    },
+    {
+      "name": "scaffold-exercises",
+      "bucket": "misc",
+      "source": "skills/misc/scaffold-exercises/SKILL.md"
+    },
+    {
+      "name": "setup-pre-commit",
+      "bucket": "misc",
+      "source": "skills/misc/setup-pre-commit/SKILL.md"
+    },
+    {
+      "name": "grill-me",
+      "bucket": "productivity",
+      "source": "skills/productivity/grill-me/SKILL.md"
+    },
+    {
+      "name": "grilling",
+      "bucket": "productivity",
+      "source": "skills/productivity/grilling/SKILL.md"
+    },
+    {
+      "name": "handoff",
+      "bucket": "productivity",
+      "source": "skills/productivity/handoff/SKILL.md"
+    },
+    {
+      "name": "teach",
+      "bucket": "productivity",
+      "source": "skills/productivity/teach/SKILL.md"
+    },
+    {
+      "name": "to-questionnaire",
+      "bucket": "productivity",
+      "source": "skills/productivity/to-questionnaire/SKILL.md"
+    },
+    {
+      "name": "wait-what",
+      "bucket": "productivity",
+      "source": "skills/productivity/wait-what/SKILL.md"
+    },
+    {
+      "name": "writing-for-agents",
+      "bucket": "productivity",
+      "source": "skills/productivity/writing-for-agents/SKILL.md"
+    }
+  ]
+}
