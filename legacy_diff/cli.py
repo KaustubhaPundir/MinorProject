@@ -10,6 +10,8 @@ from .manifest import PlanError, load_plan
 from .preflight import check_readiness
 from .execution import run_comparison
 from .suites import build_suite, check_suite
+from .generation import translate
+from .acceptance import accept_candidate
 
 
 def main(argv=None):
@@ -30,9 +32,25 @@ def main(argv=None):
     suite.add_argument("--suite-dir", required=True, type=Path)
     suite.add_argument("--candidate", required=True, type=Path)
     suite.add_argument("--output-dir", required=True, type=Path)
+    generate = commands.add_parser("translate", help="Generate and repair through local Ollama; never final acceptance")
+    generate.add_argument("manifest", type=Path)
+    generate.add_argument("--suite-dir", required=True, type=Path)
+    generate.add_argument("--output-dir", required=True, type=Path)
+    accept = commands.add_parser("accept", help="Evaluate a frozen candidate with private held-out cases; fail closed on missing gates")
+    accept.add_argument("manifest", type=Path)
+    accept.add_argument("--suite-dir", required=True, type=Path)
+    accept.add_argument("--candidate", required=True, type=Path)
+    accept.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        if args.command in ("suite-build", "suite-check"):
+        if args.command == "accept":
+            report = accept_candidate(load_plan(args.manifest), args.suite_dir, args.candidate, args.output_dir)
+            code = {"accepted": 0, "rejected": 8, "inconclusive": 7, "unsupported": 3}[report["outcome"]]
+        elif args.command == "translate":
+            report = translate(load_plan(args.manifest), args.suite_dir, args.output_dir)
+            code = {"awaiting_acceptance": 0, "unaccepted": 8, "inconclusive": 7,
+                    "prerequisites_unavailable": 4, "generation_unavailable": 4}[report["outcome"]]
+        elif args.command in ("suite-build", "suite-check"):
             report = build_suite(load_plan(args.manifest), args.output_dir) if args.command == "suite-build" else check_suite(args.suite_dir, args.candidate, args.output_dir)
             code = {"suite_ready": 0, "regression_match": 0, "mismatch": 6, "inconclusive": 7, "prerequisites_unavailable": 4}[report["outcome"]]
         elif args.command == "compare":

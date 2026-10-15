@@ -37,7 +37,7 @@ flowchart TD
 | Acceptance evaluator | Required gates and held-out isolation | Final outcome |
 | Evidence store | Artifact retention, identity, and integrity | Run evidence bundle |
 
-Ticket 01 implements plan validation and readiness checks. Ticket 02 adds the compare CLI, isolated Docker compilation/execution, exact comparator, and single-case evidence. Suite construction, model generation, and final acceptance remain planned boundaries. Use simple interfaces rather than a plugin framework.
+Tickets 01–05 implement plan validation, readiness checks, isolated comparison, frozen suites and bounded local Ollama generation/repair. `GenerationAdapter` is a small replaceable interface; independent held-out evaluation now owns candidate freezing, private case storage and final decisions. The Docker executor now supplies trusted descendant syscall tracing, cgroup resource counters and a bounded tmpfs workspace. Missing monitoring evidence still fails closed. See the implemented command guides for current constraints and verification limits.
 
 ## Generation interface
 
@@ -59,7 +59,7 @@ A nonzero program exit can be a valid observable result when both runs complete 
 
 ## Reference stability
 
-Pin compiler and runtime identities and the compilation options. Repeat representative reference cases under identical conditions; the repeat count and coverage policy remain to be finalized. Record an unstable reference as inconclusive, preserving divergent observations.
+Pin compiler and runtime identities and the compilation options. Suite construction repeats every case twice under identical conditions in fresh workspaces. An unstable or incomplete reference is inconclusive and prevents sealing, while divergent observations are preserved.
 
 Supply deterministic time or randomness through supported program inputs or controlled dependencies. If they cannot be controlled for a supported case, explain the limitation rather than silently stripping bytes from the comparison.
 

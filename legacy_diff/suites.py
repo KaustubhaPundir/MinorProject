@@ -70,8 +70,9 @@ def execute_case(plan, case, root, artifact, role, executor):
     return record
 
 
-def build_suite(plan, output, executor_factory=DockerExecutor):
-    cases, policy = construct_cases(plan)
+def build_suite(plan, output, executor_factory=DockerExecutor, *, cases=None, policy=None, metadata=None):
+    if cases is None:
+        cases, policy = construct_cases(plan)
     frozen = [{**c, "inputs": {k: v.hex() for k, v in c["inputs"].items()}, "stdin": c["stdin"].hex()} for c in cases]
     observed, problems = DockerLinuxProbe().inspect(plan)
     if problems:
@@ -79,6 +80,8 @@ def build_suite(plan, output, executor_factory=DockerExecutor):
     root = new_root(output)
     write(root / "cases.json", frozen)  # Frozen before reference execution and any candidate.
     write(root / "contract.json", plan)
+    if metadata is not None:
+        write(root / "metadata.json", metadata)
     source = root / "source"
     verified_copy(plan["program"]["source"], source / "legacy.cbl")
     for book in plan["program"]["copybooks"]:
@@ -110,7 +113,10 @@ def build_suite(plan, output, executor_factory=DockerExecutor):
         if all(c["stable"] for c in report["cases"]):
             report["outcome"] = "suite_ready"
     write(root / "expected.json", expected)
-    identity = digest({"contract": plan["contract_sha256"], "cases": frozen, "expected": expected, "repeats": 2})
+    identity_data = {"contract": plan["contract_sha256"], "cases": frozen, "expected": expected, "repeats": 2}
+    if metadata is not None:
+        identity_data["metadata"] = metadata
+    identity = digest(identity_data)
     report["suite_id"] = identity
     write(root / "report.json", report)
     if report["outcome"] == "suite_ready":
@@ -129,7 +135,12 @@ def verify_suite(root):
     plan = json.loads((root / "contract.json").read_text(encoding="utf-8"))
     cases = json.loads((root / "cases.json").read_text(encoding="utf-8"))
     expected = json.loads((root / "expected.json").read_text(encoding="utf-8"))
-    identity = digest({"contract": plan["contract_sha256"], "cases": cases, "expected": expected, "repeats": 2})
+    identity_data = {"contract": plan["contract_sha256"], "cases": cases, "expected": expected, "repeats": 2}
+    if (root / "metadata.json").exists():
+        if "metadata.json" not in seal["files"]:
+            raise PlanError("Suite metadata is not sealed.")
+        identity_data["metadata"] = json.loads((root / "metadata.json").read_text(encoding="utf-8"))
+    identity = digest(identity_data)
     if identity != seal["suite_id"] or not cases or set(expected) != {c["id"] for c in cases}:
         raise PlanError("Frozen suite identity or completeness check failed.")
     if any(r["termination"] != "completed" or r["capture_complete"] is not True for r in expected.values()):

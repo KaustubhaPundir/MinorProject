@@ -7,15 +7,11 @@ import os
 from pathlib import Path
 import shutil
 import stat
-import subprocess
-import threading
-import time
-import uuid
-from datetime import datetime, timezone
 
 from .comparison import compare_observations
 from .manifest import PlanError, file_record
-from .preflight import DockerLinuxProbe, command
+from .preflight import DockerLinuxProbe
+from .monitored_execution import DockerExecutor
 
 
 def verified_copy(record, destination):
@@ -49,142 +45,6 @@ def inventory(folder, maximum):
                 if total >= maximum:
                     raise OverflowError("Output file budget exceeded.")
     return paths, total
-
-
-class DockerExecutor:
-    def __init__(self, limits):
-        self.limits = limits
-
-    def execute(self, image, executable, args, work, mounts, environment, stdin, evidence):
-        evidence.mkdir(parents=True, exist_ok=True)
-        name = "legacy-diff-exec-" + uuid.uuid4().hex
-        maximum = self.limits["output_bytes"]
-        create = ["docker", "create", "--name", name, "--pull", "never", "--network", "none", "--read-only",
-                  "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", "65534:65534",
-                  "--memory", f"{self.limits['memory_mb']}m", "--memory-swap", f"{self.limits['memory_mb']}m",
-                  "--pids-limit", str(self.limits["processes"]), "--ulimit", f"fsize={maximum}:{maximum}",
-                  "--no-healthcheck", "--log-driver", "none", "--workdir", "/work", "--interactive",
-                  "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "--entrypoint", executable,
-                  "--mount", f"type=bind,source={work},target=/work"]
-        for source, destination in mounts:
-            create += ["--mount", f"type=bind,source={source},target={destination},readonly"]
-        for key, value in environment.items():
-            create += ["--env", f"{key}={value}"]
-        create += [image, *args]
-        start_time = time.monotonic()
-        record = {"started_at": datetime.now(timezone.utc).isoformat(), "image": image,
-                  "executable": executable, "args": args, "environment": environment,
-                  "limits": self.limits, "network": "none", "exit_code": None,
-                  "termination": "container_failure", "capture_complete": False, "files": {}, "bytes": {"stdout": b"", "stderr": b""}}
-        process, readers = None, []
-        stop = threading.Event()
-        lock = threading.Lock()
-        captured = {"stdout": bytearray(), "stderr": bytearray()}
-        stream_size = [0]
-        capture_errors = []
-
-        def drain(stream, label):
-            try:
-                while chunk := stream.read(4096):
-                    with lock:
-                        room = max(0, maximum - stream_size[0])
-                        captured[label].extend(chunk[:room])
-                        stream_size[0] += len(chunk)
-                        if stream_size[0] >= maximum:
-                            stop.set()
-            except OSError as exc:
-                capture_errors.append(str(exc))
-                stop.set()
-            finally:
-                stream.close()
-
-        def feed():
-            try:
-                process.stdin.write(stdin)
-                process.stdin.flush()
-            except (BrokenPipeError, OSError):
-                pass
-            finally:
-                process.stdin.close()
-
-        try:
-            command(create)
-            execution_start = time.monotonic()
-            process = subprocess.Popen(["docker", "start", "--attach", "--interactive", name],
-                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            for label in ("stdout", "stderr"):
-                thread = threading.Thread(target=drain, args=(getattr(process, label), label), daemon=True)
-                thread.start()
-                readers.append(thread)
-            writer = threading.Thread(target=feed, daemon=True)
-            writer.start()
-            cause = None
-            while process.poll() is None:
-                if stop.is_set():
-                    cause = "output_limit"
-                elif time.monotonic() - execution_start > self.limits["timeout_seconds"]:
-                    cause = "timeout"
-                else:
-                    try:
-                        inventory(work, maximum)
-                    except OverflowError:
-                        cause = "output_limit"
-                    except ValueError:
-                        cause = "unsafe_output"
-                if cause:
-                    subprocess.run(["docker", "kill", name], capture_output=True, timeout=5, check=False)
-                    break
-                time.sleep(0.02)
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-                cause = cause or "container_failure"
-            for thread in readers:
-                thread.join(timeout=2)
-            writer.join(timeout=2)
-            state = json.loads(command(["docker", "inspect", "--format", "{{json .State}}", name]))
-            exit_code = state.get("ExitCode")
-            if cause:
-                termination = cause
-            elif state.get("OOMKilled"):
-                termination = "memory_limit"
-            elif state.get("Running") or state.get("Error") or process.returncode != exit_code:
-                termination = "container_failure"
-            elif isinstance(exit_code, int) and exit_code >= 128:
-                termination = "signal_or_reserved_exit"
-            else:
-                termination = "completed"
-            if stop.is_set():
-                termination = "output_limit" if not capture_errors else "capture_failure"
-            record.update(exit_code=exit_code, termination=termination,
-                          capture_complete=not capture_errors and not writer.is_alive() and all(not thread.is_alive() for thread in readers))
-            try:
-                paths, total = inventory(work, maximum)
-                if total + stream_size[0] >= maximum:
-                    raise OverflowError("Combined observable budget exceeded.")
-                for path in paths:
-                    record["files"][path.relative_to(work).as_posix()] = path.read_bytes()
-            except (OverflowError, ValueError) as exc:
-                record.update(termination="output_limit" if isinstance(exc, OverflowError) else "unsafe_output", capture_complete=False)
-        except (OSError, ValueError, subprocess.SubprocessError) as exc:
-            record["error"] = str(exc)[:2000]
-            record["capture_complete"] = False
-        finally:
-            if process and process.poll() is None:
-                process.kill()
-            try:
-                result = subprocess.run(["docker", "rm", "--force", name], capture_output=True, timeout=5, check=False)
-                if result.returncode and b"No such container" not in result.stderr:
-                    record.update(termination="cleanup_failure", capture_complete=False)
-            except (OSError, subprocess.SubprocessError) as exc:
-                record.update(termination="cleanup_failure", capture_complete=False, cleanup_error=str(exc))
-            record["bytes"] = {key: bytes(value) for key, value in captured.items()}
-            record["elapsed_seconds"] = round(time.monotonic() - start_time, 3)
-            for label, value in record["bytes"].items():
-                (evidence / f"{label}.bin").write_bytes(value)
-        return record
 
 
 def public_record(record):
