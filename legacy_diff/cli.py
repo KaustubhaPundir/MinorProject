@@ -12,6 +12,7 @@ from .execution import run_comparison
 from .suites import build_suite, check_suite
 from .generation import translate
 from .acceptance import accept_candidate
+from .resume import resume
 
 
 def main(argv=None):
@@ -41,9 +42,18 @@ def main(argv=None):
     accept.add_argument("--suite-dir", required=True, type=Path)
     accept.add_argument("--candidate", required=True, type=Path)
     accept.add_argument("--output-dir", required=True, type=Path)
+    follow = commands.add_parser("resume", help="Start a new bounded repair run from rejected acceptance evidence")
+    follow.add_argument("manifest", type=Path)
+    follow.add_argument("--from-run", required=True, type=Path)
+    follow.add_argument("--suite-dir", required=True, type=Path)
+    follow.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        if args.command == "accept":
+        if args.command == "resume":
+            report = resume(load_plan(args.manifest), args.from_run, args.suite_dir, args.output_dir)
+            code = {"accepted": 0, "rejected": 8, "unaccepted": 8, "inconclusive": 7, "unsupported": 3,
+                    "generation_unavailable": 4, "prerequisites_unavailable": 4}[report["outcome"]]
+        elif args.command == "accept":
             report = accept_candidate(load_plan(args.manifest), args.suite_dir, args.candidate, args.output_dir)
             code = {"accepted": 0, "rejected": 8, "inconclusive": 7, "unsupported": 3}[report["outcome"]]
         elif args.command == "translate":

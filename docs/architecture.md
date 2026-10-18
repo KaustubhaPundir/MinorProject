@@ -37,7 +37,7 @@ flowchart TD
 | Acceptance evaluator | Required gates and held-out isolation | Final outcome |
 | Evidence store | Artifact retention, identity, and integrity | Run evidence bundle |
 
-Tickets 01–05 implement plan validation, readiness checks, isolated comparison, frozen suites and bounded local Ollama generation/repair. `GenerationAdapter` is a small replaceable interface; independent held-out evaluation now owns candidate freezing, private case storage and final decisions. The Docker executor now supplies trusted descendant syscall tracing, cgroup resource counters and a bounded tmpfs workspace. Missing monitoring evidence still fails closed. See the implemented command guides for current constraints and verification limits.
+Tickets 01–06 implement plan validation, readiness checks, isolated comparison, frozen suites and bounded local Ollama generation/repair. `GenerationAdapter` is a small replaceable interface; independent held-out evaluation now owns candidate freezing, private case storage and final decisions. The Docker executor now supplies trusted descendant syscall tracing, cgroup resource counters and a bounded tmpfs workspace. Missing monitoring evidence still fails closed. See the implemented command guides for current constraints and verification limits.
 
 ## Generation interface
 
@@ -74,3 +74,7 @@ Future adapters must define request ordering, concurrency, retry handling, secre
 Separate generator-visible regression data from evaluator-only held-out data. Neither sandbox can read expected observations or acceptance reports during execution. The orchestrator computes hashes after every finalized artifact and records which immutable candidate was evaluated.
 
 Hashes identify artifacts and detect later changes; they do not by themselves enforce access control or prevent a privileged local user from changing files. Access controls and isolated mount layouts supply the actual boundary.
+
+## Explicit follow-up runs
+
+A resume run verifies its rejected parent from raw retained observations, fingerprints the parent and its prior generation history, and rebuilds regression with exposed failures. It preserves the contract and checks that reference observations have not drifted. The generation adapter starts from the previous candidate with bounded visible feedback and the existing per-run stopping policy. Sealed metadata retains prior held-out invocation hashes and seeds across the lineage. Final acceptance excludes them and checks the parent-integrity guard before publishing a terminal decision. The parent is never rewritten. See [follow-up command](resume-command.md).

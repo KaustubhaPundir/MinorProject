@@ -1,6 +1,6 @@
 # Legacy Diff
 
-Local COBOL-to-Python generation with exact differential validation. Tickets 01–05 implement manifest checking, isolated execution, frozen regression suites, bounded local Ollama generation/repair and independent held-out acceptance.
+Local COBOL-to-Python generation with exact differential validation. Tickets 01–06 implement manifest checking, isolated execution, frozen regression suites, bounded local generation/repair, independent acceptance and explicit follow-up runs with fresh held-out evidence.
 
 Requires Python 3.11+, PyYAML 6.0.2, Docker's Linux engine, the manifest's pinned local toolchain images, and a local Ollama model for translation. From this directory:
 
@@ -32,6 +32,6 @@ The configured model is `qwen3.8:27b`. Its real ticket 04 generation request tim
 
 Programs are run only in isolated Docker containers. Output bytes, file presence and ordinary exit codes are compared exactly. Matching results apply only to the recorded cases; they are not proof of universal equivalence. Translation never grants acceptance. A trusted Linux supervisor records resource events, and a bounded tmpfs enforces the writable workspace quota. Final acceptance requires complete matching regression and private held-out evaluations, stable references, unchanged artifacts and complete resource evidence. Older regression suites must be rebuilt to include this evidence. See the [acceptance guide](docs/accept-command.md).
 
-Read the [design index](docs/README.md), [manifest contract](docs/check-command.md), [comparison guide](docs/compare-command.md), [suite guide](docs/suite-command.md), [translation guide](docs/translate-command.md), [glossary](GLOSSARY.md), and [ticket graph](.scratch/cobol-to-python/README.md).
+Read the [design index](docs/README.md), [manifest contract](docs/check-command.md), [comparison guide](docs/compare-command.md), [suite guide](docs/suite-command.md), [translation guide](docs/translate-command.md), [follow-up guide](docs/resume-command.md), [glossary](GLOSSARY.md), and [ticket graph](.scratch/cobol-to-python/README.md).
 
 Run evidence stays in ignored `runs/`. Commands never stage, commit or push files. The bundled Matt Pocock skills under `plugins/` are separate from the translation engine.

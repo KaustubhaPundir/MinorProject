@@ -1,6 +1,6 @@
 # Implemented check command: schema version 1
 
-Ticket 01 implements `legacy-diff check` and `python -m legacy_diff check`. The broader design's translate/inspect commands remain unimplemented. The [usage guide](../README.md) documents modes, report handling, and exit codes.
+Ticket 01 implements `legacy-diff check` and `python -m legacy_diff check`. Translate, accept and resume are documented in their command guides; inspect/replay remain planned. The [usage guide](../README.md) documents modes, report handling, and exit codes.
 
 ## Manifest schema
 

@@ -184,7 +184,8 @@ def failure_signature(report):
     return digest([{k: c[k] for k in ("id", "outcome", "differences")} for c in report["cases"] if c["outcome"] != "match"])
 
 
-def translate(plan, suite, output, adapter: GenerationAdapter | None = None, validator=None):
+def translate(plan, suite, output, adapter: GenerationAdapter | None = None, validator=None, *,
+              previous_candidate=None, initial_feedback=None, history=None):
     suite, output = suite.resolve(), output.resolve()
     if output.is_relative_to(suite) or suite.is_relative_to(output):
         raise PlanError("Generation output and frozen suite must be separate directories.")
@@ -192,7 +193,7 @@ def translate(plan, suite, output, adapter: GenerationAdapter | None = None, val
     if plan["contract_sha256"] != frozen["contract_sha256"]:
         raise PlanError("Manifest changed since suite construction; build a new suite.")
     sources = source_context(suite, frozen)
-    request_for(plan, plan["generation"]["model"], sources)  # Reject oversized initial context before starting a run.
+    request_for(plan, plan["generation"]["model"], sources, previous_candidate, initial_feedback)
     observed, problems = check_readiness(plan)
     if problems:
         return {"outcome": "prerequisites_unavailable", "accepted": False, "diagnostics": problems, "observed": observed}
@@ -203,8 +204,10 @@ def translate(plan, suite, output, adapter: GenerationAdapter | None = None, val
     report = {"schema_version": 1, "outcome": "unaccepted", "accepted": False, "suite_id": seal["suite_id"],
               "contract_sha256": plan["contract_sha256"], "observed": observed, "attempts": [], "maximum_attempts": 5,
               "claim": "Generation and visible regression only; held-out acceptance has not run."}
-    previous, feedback, last_signature, repeated = None, None, None, 0
-    seen = set()
+    if history is not None:
+        report["history"] = history
+    previous, feedback, last_signature, repeated = previous_candidate, initial_feedback, None, 0
+    seen = {hashlib.sha256(previous_candidate.encode()).hexdigest()} if previous_candidate is not None else set()
     best_metric = None
     for number in range(1, 6):
         try:
@@ -215,7 +218,7 @@ def translate(plan, suite, output, adapter: GenerationAdapter | None = None, val
         evidence = root / "attempts" / f"{number:02d}"
         evidence.mkdir(parents=True)
         write(evidence / "request.json", request)
-        attempt = {"number": number, "kind": "initial" if number == 1 else "repair", "model": model,
+        attempt = {"number": number, "kind": "initial" if number == 1 and previous_candidate is None else "repair", "model": model,
                    "settings": request["options"], "state": "generation_requested"}
         report["attempts"].append(attempt)
         write(root / "report.json", report)

@@ -53,7 +53,7 @@ $rules=@($check.Access | ForEach-Object {{ @{{sid=$_.IdentityReference.Translate
     return {"mechanism": "posix_owner_only", "mode": "0700", "owner_uid": info.st_uid}
 
 
-def held_out_cases(plan, regression, seed):
+def held_out_cases(plan, regression, seed, excluded=()):
     """Seed is evaluator-owned and selected only after candidate freeze."""
     requested = plan["validation"]["held_out_cases"]
     if requested > 200:
@@ -62,7 +62,10 @@ def held_out_cases(plan, regression, seed):
     settings["validation"].update(regression_seed=seed, generated_cases=200)
     generated, _ = construct_cases(settings)
     singleton = plan["input_domain"]["generator"]["kind"] == "none"
-    previous = {c["case_sha256"] for c in regression}
+    excluded = set(excluded)
+    if singleton and excluded:
+        raise PlanError("A resumed singleton domain has no fresh held-out input.", "unsupported")
+    previous = {c["case_sha256"] for c in regression} | excluded
     selected = [c for c in generated if c["classification"] == "in_domain" and (singleton or c["case_sha256"] not in previous)]
     if not singleton and len(selected) < requested:
         raise PlanError(f"Only {len(selected)} unseen valid held-out cases were constructed; {requested} required. Review counts and rebuild the regression suite.", "unsupported")
@@ -121,7 +124,7 @@ def evaluate_cases(plan, cases, observations, root, artifact, executor, stop_on_
     return result
 
 
-def accept_candidate(plan, regression, candidate, output, executor_factory=DockerExecutor):
+def accept_candidate(plan, regression, candidate, output, executor_factory=DockerExecutor, *, integrity_guard=None):
     regression, candidate, output = regression.resolve(), candidate.absolute(), output.resolve()
     if output.is_relative_to(regression) or regression.is_relative_to(output) or candidate.resolve().is_relative_to(output):
         raise PlanError("Acceptance output, regression suite and candidate input must be separate.")
@@ -166,10 +169,15 @@ def accept_candidate(plan, regression, candidate, output, executor_factory=Docke
                 report.update(outcome="rejected", reason="regression_mismatch")
             else:
                 report["gates"]["regression_matches_complete"] = True
-                seed = secrets.randbelow(1000001)
-                while seed == plan["validation"]["regression_seed"]:
+                history = json.loads((regression / "metadata.json").read_text()) if (regression / "metadata.json").exists() else {}
+                used_seeds = set(history.get("excluded_held_out_seeds", [])) | {plan["validation"]["regression_seed"]}
+                for _ in range(32):
                     seed = secrets.randbelow(1000001)
-                selected, policy = held_out_cases(plan, cases, seed)
+                    if seed not in used_seeds:
+                        break
+                else:
+                    raise PlanError("Could not select a fresh evaluator seed.", "unsupported")
+                selected, policy = held_out_cases(plan, cases, seed, history.get("acceptance_exclusions", []))
                 metadata = {"purpose": "held_out", "seed": seed, "seed_owner": "evaluator",
                             "constructed_after_candidate_sha256": identity["sha256"], "policy": policy}
                 held_root = protected / "held-out"
@@ -212,6 +220,8 @@ def accept_candidate(plan, regression, candidate, output, executor_factory=Docke
         for path, expected in seals.items():
             if verify_suite(path)[0] != expected:
                 raise PlanError("Suite changed during final evaluation.")
+        if integrity_guard is not None:
+            integrity_guard()
         report["gates"]["candidate_and_suites_unchanged"] = True
     except (OSError, ValueError, KeyError, PlanError) as exc:
         report.update(outcome="inconclusive", accepted=False, reason="integrity_gate_failed", diagnostic=str(exc))

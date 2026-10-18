@@ -1,6 +1,6 @@
 # COBOL-to-Python Differential Validation
 
-Status: tickets 01–05 are implemented; 97 tests pass. Local Ollama generation and bounded repair are available. The real qwen3.8:27b smoke test timed out and remains unaccepted; no successful model translation is claimed. Independent held-out acceptance and trusted resource monitoring pass live Docker verification with controlled candidates.
+Status: tickets 01–06 are implemented; 116 tests pass. Local Ollama generation and bounded repair are available. The real qwen3.8:27b smoke test timed out and remains unaccepted; no successful model translation is claimed. Independent held-out acceptance and trusted resource monitoring pass live Docker verification with controlled candidates.
 
 This system generates standalone Python from batch COBOL and accepts a candidate only after differential validation against the original program. The comparison concerns execution results, not source-code bytes.
 
@@ -11,6 +11,8 @@ This system generates standalone Python from batch COBOL and accepts a candidate
 - [Frozen suite commands](suite-command.md): executable constraints, independent cases, reference stability and integrity checks.
 - [Generation and repair command](translate-command.md): local Ollama, candidate screening, repair budgeting and evidence.
 - [Independent acceptance](accept-command.md): private held-out evaluation, acceptance gates and resource monitoring.
+- [Follow-up repair runs](resume-command.md): parent preservation, failure promotion and fresh acceptance.
+- [Ticket 06 verification](ticket-06-verification.md): automated coverage and controlled generation with live Docker.
 - [Ticket 05 verification](ticket-05-verification.md): tests and live Docker outcomes.
 - [Ticket 04 verification](ticket-04-verification.md): deterministic tests and the actual local inference failure.
 - [Ticket 01 verification](ticket-01-verification.md): automated coverage and actual local prerequisite findings.
