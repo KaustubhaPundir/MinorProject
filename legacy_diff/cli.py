@@ -13,11 +13,19 @@ from .suites import build_suite, check_suite
 from .generation import translate
 from .acceptance import accept_candidate
 from .resume import resume
+from .inspection import inspect_run, verified_acceptance, replay_run
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="legacy-diff")
     commands = parser.add_subparsers(dest="command", required=True)
+    inspect = commands.add_parser("inspect", help="Read a public retained report offline; evidence integrity is not yet verified")
+    inspect.add_argument("run", type=Path)
+    inspect.add_argument("--suite-dir", type=Path, help="Verify terminal acceptance evidence against its original suite")
+    replay = commands.add_parser("replay", help="Replay terminal acceptance invocations without model generation")
+    replay.add_argument("run", type=Path)
+    replay.add_argument("--suite-dir", required=True, type=Path)
+    replay.add_argument("--output-dir", required=True, type=Path)
     check = commands.add_parser("check", help="Validate a manifest and check local prerequisites")
     check.add_argument("manifest", type=Path)
     check.add_argument("--offline", action="store_true", help="Validate the contract without probing services; never means ready")
@@ -49,7 +57,16 @@ def main(argv=None):
     follow.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        if args.command == "resume":
+        if args.command == "inspect":
+            report = inspect_run(args.run)
+            if args.suite_dir:
+                verified_acceptance(args.run, args.suite_dir)
+                report["integrity"] = "recorded_hashes_and_comparisons_verified"
+            code = 0
+        elif args.command == "replay":
+            report = replay_run(args.run, args.suite_dir, args.output_dir)
+            code = 0 if report["outcome"] == "reproduced" else 4 if report["outcome"] == "prerequisites_unavailable" else 7
+        elif args.command == "resume":
             report = resume(load_plan(args.manifest), args.from_run, args.suite_dir, args.output_dir)
             code = {"accepted": 0, "rejected": 8, "unaccepted": 8, "inconclusive": 7, "unsupported": 3,
                     "generation_unavailable": 4, "prerequisites_unavailable": 4}[report["outcome"]]

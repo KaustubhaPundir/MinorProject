@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
 
 from .cases import digest
+from .coordination import coordinated
 from .manifest import PlanError, relative_path
 from .preflight import NoRedirect, check_readiness, probe_ollama
 from .suites import check_suite, new_root, verify_suite, write
@@ -184,6 +185,7 @@ def failure_signature(report):
     return digest([{k: c[k] for k in ("id", "outcome", "differences")} for c in report["cases"] if c["outcome"] != "match"])
 
 
+@coordinated
 def translate(plan, suite, output, adapter: GenerationAdapter | None = None, validator=None, *,
               previous_candidate=None, initial_feedback=None, history=None):
     suite, output = suite.resolve(), output.resolve()

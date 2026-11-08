@@ -35,7 +35,7 @@ def read_json(path):
     return value
 
 
-def verify_results(root, group, recorded, cases, expected):
+def verify_results(root, group, recorded, cases, expected, *, evidence_base=None):
     """Recompute comparisons from retained raw outputs, not claimed outcomes."""
     results = recorded["cases"]
     if (recorded["planned"] != len(cases) or recorded["completed"] != len(results)
@@ -43,7 +43,7 @@ def verify_results(root, group, recorded, cases, expected):
             or [c["id"] for c in results] != [c["id"] for c in cases[:len(results)]]):
         raise PlanError("Parent comparison case counts or ordering are inconsistent.")
     for result in results:
-        evidence = root / "private" / group / result["id"]
+        evidence = (evidence_base or root / "private" / group) / result["id"]
         raw = {**result["execution"], "bytes": {}, "files": {}}
         for stream in ("stdout", "stderr"):
             raw["bytes"][stream] = (evidence / "evidence" / (stream + ".bin")).read_bytes()
