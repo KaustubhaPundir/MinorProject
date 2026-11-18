@@ -23,6 +23,18 @@ def completed(stdout=b"", stderr=b"", files=None, exit_code=0):
 
 
 class ComparisonTests(unittest.TestCase):
+    def test_runtime_exception_tail_reaches_repair_feedback_bounded(self):
+        from legacy_diff.generation import regression_feedback
+        stderr = b'Traceback\n' + b'x' * 3000 + b'\nIndexError: string index out of range\n'
+        result = compare_observations(completed(), completed(stderr=stderr, exit_code=1))
+        report = {'cases': [{'id': 'case', **result}]}
+        cases = [{'id': 'case', 'classification': 'in_domain', 'inputs': {}, 'stdin': ''}]
+        feedback = regression_feedback(report, cases)
+        difference = next(d for d in feedback['cases'][0]['differences'] if d['observable'] == 'stderr')
+        self.assertIn('IndexError', difference['candidate_stderr_tail'])
+        self.assertTrue(difference['candidate_stderr_tail_truncated'])
+        self.assertLess(len(difference['candidate_stderr_tail']), 2200)
+
     def test_compare_cli_outcomes_and_no_ollama_probe(self):
         for outcome, expected in (("match", 0), ("mismatch", 6), ("inconclusive", 7), ("prerequisites_unavailable", 4)):
             with self.subTest(outcome=outcome), patch("legacy_diff.cli.load_plan", return_value={}), patch("legacy_diff.cli.run_comparison", return_value={"outcome": outcome}), patch("legacy_diff.cli.check_readiness") as readiness, contextlib.redirect_stdout(io.StringIO()):
@@ -62,6 +74,19 @@ class ComparisonTests(unittest.TestCase):
     def test_context_is_bounded(self):
         diff = bytes_difference(b"a" * 10000, b"a" * 9999 + b"b", "stdout")
         self.assertLessEqual(len(diff["reference_hex"]), 34)
+
+    def test_layout_exposes_blank_lines_columns_and_eof_without_normalizing(self):
+        diff = bytes_difference(b'Header\n\n\n   123     Name\n\n', b'Header\n   123        Name\n', 'stdout')
+        layout = diff['reference_layout']
+        self.assertEqual(layout['line_number'], 2)
+        self.assertEqual(layout['following_nonblank_line_number'], 4)
+        self.assertEqual(layout['nonspace_runs'], [[4, 3, "b'123'"], [12, 4, "b'Name'"]])
+        self.assertEqual(layout['trailing_lf_count'], 2)
+        self.assertEqual(diff['candidate_layout']['nonspace_runs'][1][0], 15)
+        self.assertEqual(diff['kind'], 'byte_difference')
+        large = bytes_difference(b'x' * 10000, b'y' * 10000, 'stdout')
+        self.assertTrue(large['reference_layout']['prefix_truncated'])
+        self.assertLess(len(large['reference_layout']['following_line_prefix']), 140)
 
     def test_public_record_has_hashes_not_raw_bytes(self):
         result = public_record(completed(files={"report": b"abc"}))

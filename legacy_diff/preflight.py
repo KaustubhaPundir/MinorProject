@@ -100,6 +100,9 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def probe_ollama(plan):
+    if plan["generation"]["adapter"] in ("huggingface", "groq"):
+        from .hosted import readiness
+        return readiness(plan)
     endpoint = plan["generation"]["endpoint"]
     try:
         opener = build_opener(ProxyHandler({}), NoRedirect())

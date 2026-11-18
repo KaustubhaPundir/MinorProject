@@ -9,14 +9,14 @@ from unittest.mock import patch, MagicMock
 
 from legacy_diff.cli import main
 from legacy_diff.generation import (GenerationError, OllamaAdapter, MAX_RESPONSE, response_code,
-                                   screen_candidate, translate, request_for)
+                                   screen_candidate, translate, request_for, regression_feedback, prompt_feedback, JSON_EXAMPLE)
 from legacy_diff.manifest import PlanError, load_plan
 from legacy_diff.suites import build_suite, verify_suite
 import test_suites
 
 
 def response(code="from pathlib import Path\nPath('report.dat').write_bytes(b'HELLO\\n')\n", path="main.py"):
-    return {"model": "qwen3.8:27b", "done": True, "done_reason": "stop",
+    return {"model": "qwen2.5-coder:7b", "done": True, "done_reason": "stop",
             "message": {"role": "assistant", "content": json.dumps({"files": [{"path": path, "content": code}]})}}
 
 
@@ -33,7 +33,116 @@ class FakeGeneration:
         return result
 
 
+class FeedbackTests(unittest.TestCase):
+    def test_extra_source_json_layer_is_decoded_once(self):
+        from legacy_diff.generation import decode_source_transport
+        source = 'import sys\nprint("Hello\\nworld")\n'
+        escaped = json.dumps(source)[1:-1]
+        self.assertEqual(decode_source_transport(escaped), source)
+        self.assertEqual(decode_source_transport(source), source)
+        twice = json.dumps(escaped)[1:-1]
+        self.assertEqual(decode_source_transport(twice), twice)
+        mixed = 'print("Hello")\\n'
+        self.assertEqual(decode_source_transport(mixed), mixed)
+
+    def test_repair_withdraws_false_analysis_and_prioritizes_measured_layout(self):
+        plan = load_plan(Path('examples/report-writer/manifest.groq.yaml'))
+        analysis = {'report_layout': 'Every line is 132 characters, padded with spaces.'}
+        feedback = {'cases': [{'id': 'visible', 'differences': [
+            {'observable': 'file:report.txt', 'reference_layout': {'line_length': 47},
+             'candidate_layout': {'line_length': 132}}]}], 'failed_cases': 1}
+        before = copy.deepcopy(analysis)
+        initial = request_for(plan, plan['generation']['model'], [], analysis=analysis)
+        self.assertEqual(json.loads(initial['messages'][1]['content'])['source_analysis'], analysis)
+        repair = request_for(plan, plan['generation']['model'], [], 'print(1)', feedback, analysis)
+        context = json.loads(repair['messages'][1]['content'])
+        self.assertNotIn('source_analysis', context)
+        self.assertIn('withdrawn', context['source_analysis_status'])
+        self.assertIn('override earlier analysis', context['repair_task'])
+        self.assertEqual(context['regression_feedback']['cases'][0]['differences'][0]['reference_layout']['line_length'], 47)
+        self.assertEqual(analysis, before)
+
+    def test_prompt_compaction_preserves_evidence_without_mutating_it(self):
+        difference = {'offset': 3, 'reference_hex': '20', 'reference_bytes': "b' '",
+                      'reference_whitespace_runs': [{'count': 1}],
+                      'reference_layout': {'line_number': 2, 'nonspace_runs': [[4, 1, "b'A'"]],
+                                           'following_line_prefix': "b'   A'"}}
+        feedback = {'failed_cases': 10, 'shown_cases': 3, 'cases':
+                    [{'id': str(i), 'differences': [difference]} for i in range(3)]}
+        before = copy.deepcopy(feedback)
+        compact = prompt_feedback(feedback, 2)
+        self.assertEqual(feedback, before)
+        self.assertEqual(compact['shown_cases'], 2)
+        d = compact['cases'][0]['differences'][0]
+        self.assertNotIn('reference_hex', d)
+        self.assertNotIn('reference_whitespace_runs', d)
+        self.assertEqual(d['reference_layout']['nonspace_runs'], [[4, 1, "b'A'"]])
+
+    def test_selects_distinct_in_domain_failures_before_repeated_or_outside_cases(self):
+        cases, results = [], []
+        for index, offset in enumerate((1, 1, 1, 9, 20)):
+            identity = str(index)
+            cases.append({'id': identity, 'classification': 'out_of_domain' if index == 0 else 'in_domain',
+                          'inputs': {'input': '61'}, 'stdin': ''})
+            results.append({'id': identity, 'outcome': 'mismatch', 'differences':
+                            [{'observable': 'stdout', 'kind': 'byte_difference', 'offset': offset}]})
+        feedback = regression_feedback({'cases': results}, cases)
+        self.assertEqual([c['id'] for c in feedback['cases']], ['1', '3', '4'])
+        self.assertEqual(feedback['failed_cases'], 5)
+
+    def test_response_example_round_trips_python_escapes(self):
+        code = response_code({'model': 'test', 'done': True, 'done_reason': 'stop',
+                              'message': {'role': 'assistant', 'content': JSON_EXAMPLE}}, 'main.py', 'test')
+        self.assertEqual(code, "print('example\\n')\n")
+        self.assertEqual(screen_candidate(code), [])
+
+    def test_reports_absolute_whitespace_positions_without_claiming_full_runs(self):
+        from legacy_diff.comparison import bytes_difference
+        difference = bytes_difference(b'ID     Name\n\n', b'ID        Name\n', 'file:report.txt')
+        report = {'cases': [{'id': 'visible', 'outcome': 'mismatch', 'differences': [difference]}]}
+        cases = [{'id': 'visible', 'classification': 'in_domain', 'inputs': {}, 'stdin': ''}]
+        result = regression_feedback(report, cases)['cases'][0]['differences'][0]
+        self.assertEqual(result['reference_byte_at_difference'], ord('N'))
+        self.assertEqual(result['candidate_byte_at_difference'], 32)
+        self.assertEqual(result['reference_whitespace_runs'][0],
+                         {'byte': 32, 'offset': 2, 'count': 5, 'open_left': False, 'open_right': False})
+        self.assertEqual(result['candidate_whitespace_runs'][0]['count'], 8)
+        self.assertEqual(report['cases'][0]['differences'][0], difference)
+
+    def test_clipped_runs_and_eof_are_explicit(self):
+        from legacy_diff.comparison import bytes_difference
+        difference = bytes_difference(b' ' * 30 + b'X', b' ' * 30, 'stdout')
+        report = {'cases': [{'id': 'visible', 'outcome': 'mismatch', 'differences': [difference]}]}
+        cases = [{'id': 'visible', 'classification': 'in_domain', 'inputs': {}, 'stdin': ''}]
+        result = regression_feedback(report, cases)['cases'][0]['differences'][0]
+        self.assertEqual(result['candidate_byte_at_difference'], 'EOF')
+        self.assertTrue(result['reference_whitespace_runs'][0]['open_left'])
+        self.assertEqual(result['reference_whitespace_runs'][0]['count'], 8)
+
+
 class GenerationTests(unittest.TestCase):
+    def test_analysis_first_is_retained_and_supplied_to_codegen(self):
+        analysis = {key: 'Derived from source' for key in ('report_layout', 'eof_behavior', 'file_behavior', 'uncertainties')}
+        reply = response()
+        reply['message']['content'] = json.dumps(analysis)
+        adapter = FakeGeneration([reply, response()])
+        report = translate(self.plan, self.suite, self.root / 'analyzed', adapter,
+                           lambda *args: {'outcome': 'regression_match', 'cases': []}, analysis_first=True)
+        self.assertEqual(report['analysis']['state'], 'completed')
+        self.assertEqual(report['attempt_count'], 1)
+        context = json.loads(adapter.requests[1]['messages'][1]['content'])
+        self.assertEqual(context['source_analysis'], analysis)
+        self.assertNotIn('regression_feedback', json.loads(adapter.requests[0]['messages'][1]['content']))
+        self.assertEqual(report['outcome'], 'awaiting_acceptance')
+
+    def test_invalid_analysis_stops_without_candidate_execution(self):
+        adapter = FakeGeneration([response()])
+        validator = MagicMock()
+        report = translate(self.plan, self.suite, self.root / 'analyzed', adapter, validator, analysis_first=True)
+        self.assertEqual(report['stop_reason'], 'analysis_failed')
+        self.assertEqual(report['attempt_count'], 0)
+        validator.assert_not_called()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -85,7 +194,11 @@ class GenerationTests(unittest.TestCase):
         self.assertEqual(report["attempt_count"], 2)
         context = json.loads(adapter.requests[1]["messages"][1]["content"])
         self.assertEqual(context["previous_candidate"], "print('wrong')")
+        self.assertIn('complete corrected file', context['repair_task'])
         self.assertEqual(context["regression_feedback"]["failed_cases"], 1)
+        difference = context["regression_feedback"]["cases"][0]["differences"][0]
+        self.assertEqual(difference["reference_bytes"], "b'HELLO\\n'")
+        self.assertEqual(difference["candidate_bytes"], "b'HALLO\\n'")
         self.assertNotIn("held_out", context)
         self.assertEqual(report["attempts"][1]["kind"], "repair")
 
@@ -154,7 +267,7 @@ class GenerationTests(unittest.TestCase):
 
     def test_oversized_initial_context_rejected_without_request(self):
         with self.assertRaises(PlanError):
-            request_for(self.plan, "qwen3.8:27b", [{"name": "legacy.cbl", "content": "x" * 20000}])
+            request_for(self.plan, "qwen2.5-coder:7b", [{"name": "legacy.cbl", "content": "x" * 20000}])
 
     def test_large_candidate_repair_context_stops_unaccepted(self):
         report, adapter, calls = self.run_translation([response("#" + "x" * 12000 + "\nprint(1)")], iter([self.mismatch()]))
@@ -182,13 +295,13 @@ class ArtifactTests(unittest.TestCase):
 
     def test_response_structure_and_completion(self):
         valid = response()
-        self.assertIn("HELLO", response_code(valid, "main.py", "qwen3.8:27b"))
+        self.assertIn("HELLO", response_code(valid, "main.py", "qwen2.5-coder:7b"))
         variants = [{**valid, "done": False}, {**valid, "model": "other"}, {**valid, "done_reason": "length"},
                     response(path="C:/escape.py"), response(path="other.py"), response(code=""),
                     {**valid, "message": {"role": "assistant", "content": "```python\npass\n```"}}]
         for variant in variants:
             with self.subTest(variant=variant), self.assertRaises((ValueError, PlanError)):
-                response_code(variant, "main.py", "qwen3.8:27b")
+                response_code(variant, "main.py", "qwen2.5-coder:7b")
 
     def test_transport_local_only_and_bounded(self):
         for url in ("https://example.com", "http://127.0.0.1:11434/other", "http://user@localhost:11434", "http://localhost/?x=1"):

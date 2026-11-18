@@ -1,0 +1,47 @@
+schema_version: 1
+program:
+  source: sum.cob
+  source_format: free
+  compiler_flags:
+  - -Wall
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs: []
+  outputs: []
+  network_profile: disabled
+input_domain:
+  description: Review stdin line order and ranges for this program. Repeated/conditional
+    ACCEPT may require editing this draft.
+  encoding: ascii
+  reviewed: true
+  constraints:
+  - One LF-terminated line per configured stdin field. Review loop counts and business
+    constraints.
+  generator:
+    kind: stdin_lines
+    fields:
+    - name: num1-1
+      type: integer
+      min: 0
+      max: 99999
+    - name: num2-2
+      type: integer
+      min: 0
+      max: 99999
+toolchains:
+  cobol:
+    image: docker.io/dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.1.2.0
+  python:
+    image: docker.io/library/python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: groq
+  model: openai/gpt-oss-120b
+  maximum_attempts: 5
+validation:
+  regression_seed: 1234
+  generated_cases: 5
+  held_out_cases: 3

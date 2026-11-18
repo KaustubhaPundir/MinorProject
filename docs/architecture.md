@@ -1,6 +1,6 @@
 # Architecture
 
-The CLI coordinates generation and validation. The generation engine proposes code; the validator owns execution evidence and the acceptance decision.
+The CLI and local browser server coordinate generation and validation. The generation engine proposes code or structured IR; the validator owns execution evidence and the acceptance decision.
 
 ```mermaid
 flowchart TD
@@ -8,9 +8,14 @@ flowchart TD
     P --> T[Independent suite builder]
     T --> R[Reference executor]
     R --> E[Protected reference observations]
-    P --> G[Generation adapter]
-    G <--> O[Local Ollama]
-    G --> C[Candidate artifact]
+    P --> G[Explicit generation adapter]
+    G <--> O[Local Ollama or hosted Groq / Hugging Face]
+    G --> M{Translation path}
+    M -->|General AI| C[Candidate Python artifact]
+    M -->|AI-proposed IR| V[Strict IR validation and readable emission]
+    P --> S[Optional deterministic strict frontend]
+    S --> V
+    V --> C
     C --> X[Candidate executor]
     T --> X
     X --> D[Differential comparator]
@@ -23,6 +28,16 @@ flowchart TD
 ```
 
 ## Components and ownership
+
+The browser UI runs through the same suite, generation and acceptance modules as the CLI. It accepts uploaded ASCII source, infers fixed/free format from meaningful lines, drafts a reviewed input domain, and starts a background conversion. Only accepted, integrity-verified Python is released as the final conversion download. Provider credentials remain in the server environment.
+
+General AI generates Python directly for broader supported programs. Strict console, report and decimal frontends instead constrain the source/IR shape and emit readable Python through trusted emitters. AI-proposed IR still requires a real model call; deterministic extraction does not. These paths share exact comparison and acceptance gates.
+
+Input generation supports fixed-record files, reviewed stdin-line fields and explicit no-input singleton domains. Fresh held-out inputs are independent of model output. Singleton acceptance independently reexecutes the program and makes no unseen-input claim.
+
+Hosted adapters retain redacted requests/responses and expose provider errors without automatic fallback. Groq uses ordinary completion transport with strict local JSON artifact validation; direct GPT-OSS generation uses low reasoning effort and an 8,192-token completion allowance. Incomplete responses remain rejected. A single extra JSON escaping layer may be decoded only under narrow syntax checks, with original-source hash provenance.
+
+Visible repair diagnostics include byte offsets, layout/whitespace information and a bounded candidate stderr tail. This exposes runtime exceptions without giving the generator private held-out evidence. Static screening does not replace Docker isolation or differential validation.
 
 | Component | Responsibility | Owned artifacts |
 | --- | --- | --- |

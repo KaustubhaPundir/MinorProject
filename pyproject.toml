@@ -16,4 +16,4 @@ legacy-diff = "legacy_diff.cli:main"
 include = ["legacy_diff*"]
 
 [tool.setuptools.package-data]
-legacy_diff = ["supervisor.c"]
+legacy_diff = ["supervisor.c", "web.html"]

@@ -1,6 +1,6 @@
 # COBOL-to-Python Differential Validation
 
-Status: tickets 01â€“06 are implemented; 116 tests pass. Local Ollama generation and bounded repair are available. The real qwen3.8:27b smoke test timed out and remains unaccepted; no successful model translation is claimed. Independent held-out acceptance and trusted resource monitoring pass live Docker verification with controlled candidates.
+Status: tickets 01–08 are implemented with recorded limitations; 127 core tests pass. The optional pinned MIT report writer compiles and has 20 stable reference cases. The real local model attempt failed with HTTP 500; no successful model translation is claimed. See [ticket 08 verification](ticket-08-verification.md).
 
 This system generates standalone Python from batch COBOL and accepts a candidate only after differential validation against the original program. The comparison concerns execution results, not source-code bytes.
 
@@ -33,6 +33,20 @@ The specification records confirmed requirements. Field names, command names, mo
 
 - [Ollama Qwen2.5-Coder 7B](https://ollama.com/library/qwen2.5-coder:7b): initial local model recommendation; published package size 4.7 GB. Runtime requires additional memory.
 - [Ollama Qwen3-Coder 30B](https://ollama.com/library/qwen3-coder:30b): possible future model; published package size 19 GB. No COBOL-specific quality ranking has been established.
-- [Optional COBOL example](https://github.com/shamrice/COBOL-Examples/tree/main/report_writer) and [MIT license](https://github.com/shamrice/COBOL-Examples/blob/main/LICENSE): side-by-side demonstration material, not the core product or a verified runtime fixture. Pin a commit and retain its license before bundling.
+- [Optional COBOL example](https://github.com/shamrice/COBOL-Examples/tree/main/report_writer) and [MIT license](https://github.com/shamrice/COBOL-Examples/blob/main/LICENSE): optional demonstration material, now pinned and bundled with its license in examples/report-writer; see ticket-08-verification.md for actual execution results.
 
 Documentation date: 9 October 2026. Model tags and local service availability can change; record actual identities and environment details for each run.
+
+- [Complete demo workflow](workflow-demo.md)
+- [Inspection and replay](inspect-replay-command.md)
+- [Bundled licensed example](../examples/report-writer/README.md)
+
+- [Hosted Hugging Face generation](hosted-generation.md): optional API adapter, credential handling, costs and provenance limits.
+
+- [Groq generation](groq-generation.md): optional free-tier provider with bounded usage and rate-limit diagnostics.
+
+- [Structured report translation](structured-report.md): strict source-to-IR-to-Python subset, pagination, fixtures and live acceptance results.
+
+- [Structured decimal translation](structured-decimal.md): bounded fixed-point arithmetic, rounding, overflow and independent acceptance.
+
+- [AI-proposed IR translation](ai-ir.md): model-generated structured data, trusted emitters, visible repair and independent acceptance.

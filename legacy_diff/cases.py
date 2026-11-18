@@ -14,6 +14,9 @@ def validate_generator(domain, destinations):
     generator = domain.get("generator")
     if not isinstance(generator, dict):
         raise PlanError("Suite construction requires input_domain.generator reviewed with the constraints.", "unsupported")
+    if generator.get('kind') == 'stdin_lines':
+        from .stdin_cases import validate
+        return validate(domain, destinations)
     if generator.get("kind") == "none":
         mapping(generator, "generator", ("kind",))
         if destinations:
@@ -142,6 +145,9 @@ def construct_cases(plan):
             raise PlanError("Fixture changed since contract resolution.")
         return value
     base_inputs = {item["sandbox_path"]: read(item) for item in execution["inputs"]}
+    if generator['kind'] == 'stdin_lines':
+        from .stdin_cases import construct
+        return construct(plan, base_inputs)
     stdin = read(execution["stdin"]) if "stdin" in execution else b""
     cases, identities = [], {}
     def add(inputs, tags):

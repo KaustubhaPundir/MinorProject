@@ -32,3 +32,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 *.log
+
+# Temporary upstream checkout used to vendor the ticket 08 example
+/tmp/ticket08-upstream/
+
+# Generated distribution archives
+/output/*.zip

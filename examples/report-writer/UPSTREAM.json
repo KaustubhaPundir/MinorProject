@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/shamrice/COBOL-Examples",
+  "commit": "5c6dc7ceda33c86c98b026f77f09f551105146aa",
+  "directory": "report_writer",
+  "files": {
+    "report_test.cbl": "9e0f90b3c04ad9a0938def60493fddf50ee61877fe49b62a818723a425e9d4df",
+    "input.txt": "000315a7a06c6f0e92512ec11fbfcce654d290e0ce98e6d7b12dd0cb440bb564",
+    "LICENSE": "f84442f9bb09665e9af8613517744faa906b95f9abdebba357ae4a165ebfd3bc"
+  }
+}

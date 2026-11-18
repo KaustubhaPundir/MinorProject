@@ -29,8 +29,8 @@ class ResumeTests(unittest.TestCase):
         self.allowed = set()
         self.hook = None
         for name, value in (("legacy_diff.suites.DockerLinuxProbe.inspect", ({}, [])),
-                            ("legacy_diff.generation.check_readiness", ({"ollama": {"endpoint": "http://127.0.0.1:11434", "model": "qwen3.8:27b", "digest": "a" * 64}}, [])),
-                            ("legacy_diff.generation.probe_ollama", ({"endpoint": "http://127.0.0.1:11434", "model": "qwen3.8:27b", "digest": "a" * 64}, []))):
+                            ("legacy_diff.generation.check_readiness", ({"ollama": {"endpoint": "http://127.0.0.1:11434", "model": "qwen2.5-coder:7b", "digest": "a" * 64}}, [])),
+                            ("legacy_diff.generation.probe_ollama", ({"endpoint": "http://127.0.0.1:11434", "model": "qwen2.5-coder:7b", "digest": "a" * 64}, []))):
             patcher = patch(name, return_value=value); patcher.start(); self.addCleanup(patcher.stop)
         self.suite = self.root / "suite"
         build_suite(self.plan, self.suite, self.factory)

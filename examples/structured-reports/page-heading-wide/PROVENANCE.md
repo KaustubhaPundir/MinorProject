@@ -1,0 +1,1 @@
+Adapted from ../../report-writer/report_test.cbl (shamrice/COBOL-Examples, MIT). Original notices and LICENSE retained. Widths, columns, page bounds, file names and fixture data changed for differential testing.

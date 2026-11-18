@@ -1,0 +1,79 @@
+schema_version: 1
+program:
+  source: report_test.cbl
+  source_format: fixed
+  compiler_flags:
+  - -Wall
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs:
+  - fixture: input.txt
+    sandbox_path: input.txt
+  outputs:
+  - report.txt
+  network_profile: disabled
+input_domain:
+  description: ASCII student records for the optional upstream report writer. Preserve
+    observed EOF/report layout behavior.
+  encoding: ascii
+  reviewed: true
+  record_width_bytes: 31
+  constraints:
+  - Each record has six ID digits, twenty name bytes, three major bytes and two course
+    digits.
+  - Generated valid cases contain 0..3 LF-terminated records. No arguments or stdin.
+  generator:
+    kind: fixed_records
+    input: input.txt
+    record_count:
+      min: 0
+      max: 3
+    line_ending: lf
+    fields:
+    - name: id
+      type: integer
+      offset: 0
+      width: 6
+      min: 0
+      max: 999999
+      sign: none
+    - name: name
+      type: choice
+      offset: 6
+      width: 20
+      choices:
+      - Test Name2
+      - Alice
+      - Bob
+    - name: major
+      type: choice
+      offset: 26
+      width: 3
+      choices:
+      - PHY
+      - MAT
+    - name: courses
+      type: integer
+      offset: 29
+      width: 2
+      min: 0
+      max: 99
+      sign: none
+toolchains:
+  cobol:
+    image: docker.io/dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.1.2.0
+  python:
+    image: docker.io/library/python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: ollama
+  endpoint: http://127.0.0.1:11434
+  model: qwen2.5-coder:7b
+  maximum_attempts: 5
+validation:
+  regression_seed: 1234
+  generated_cases: 3
+  held_out_cases: 2

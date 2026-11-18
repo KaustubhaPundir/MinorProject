@@ -1,0 +1,64 @@
+schema_version: 1
+program:
+  source: legacy.cbl
+  source_format: fixed
+  compiler_flags:
+  - -Wall
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs:
+  - fixture: amounts.dat
+    sandbox_path: amounts.dat
+  outputs:
+  - results.dat
+  network_profile: disabled
+input_domain:
+  description: 'add-truncate: numeric DISPLAY records; stored digits represent integer
+    units scaled by each PIC V, with a separate leading sign when declared.'
+  encoding: ascii
+  reviewed: true
+  record_width_bytes: 10
+  constraints:
+  - 0..3 LF-terminated fixed-width records. Arithmetic uses COBOL receiving-field
+    precision.
+  - Field integer ranges are scaled units, not decimal strings with a point.
+  generator:
+    kind: fixed_records
+    input: amounts.dat
+    record_count:
+      min: 0
+      max: 3
+    line_ending: lf
+    fields:
+    - name: amount
+      type: integer
+      offset: 0
+      width: 5
+      min: 0
+      max: 99999
+      sign: none
+    - name: adjustment
+      type: integer
+      offset: 5
+      width: 5
+      min: 0
+      max: 99999
+      sign: none
+toolchains:
+  cobol:
+    image: docker.io/dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.1.2.0
+  python:
+    image: docker.io/library/python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: ollama
+  endpoint: http://127.0.0.1:11434
+  model: qwen2.5-coder:7b
+  maximum_attempts: 5
+validation:
+  regression_seed: 1234
+  generated_cases: 2
+  held_out_cases: 2

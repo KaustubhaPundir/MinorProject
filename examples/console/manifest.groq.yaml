@@ -1,0 +1,37 @@
+schema_version: 1
+program:
+  source: hello.cob
+  source_format: free
+  compiler_flags:
+  - -Wall
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs: []
+  outputs: []
+  network_profile: disabled
+input_domain:
+  description: Console literal program with no inputs; singleton domain.
+  encoding: ascii
+  reviewed: true
+  constraints:
+  - No stdin, arguments or input files. Acceptance repeats the single no-input execution;
+    no novel held-out inputs exist.
+  generator:
+    kind: none
+toolchains:
+  cobol:
+    image: docker.io/dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.1.2.0
+  python:
+    image: docker.io/library/python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: groq
+  model: openai/gpt-oss-120b
+  maximum_attempts: 5
+validation:
+  regression_seed: 1234
+  generated_cases: 1
+  held_out_cases: 1

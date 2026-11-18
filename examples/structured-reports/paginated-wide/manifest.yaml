@@ -1,0 +1,76 @@
+schema_version: 1
+program:
+  source: legacy.cbl
+  source_format: fixed
+  compiler_flags:
+  - -Wall
+target:
+  language: python
+  entrypoint: main.py
+execution:
+  inputs:
+  - fixture: orders.dat
+    sandbox_path: orders.dat
+  outputs:
+  - summary.dat
+  network_profile: disabled
+input_domain:
+  description: 'Wide paginated report: ASCII fixed records, 0..9 records.'
+  encoding: ascii
+  reviewed: true
+  record_width_bytes: 21
+  constraints:
+  - 'Wide paginated report: ASCII fixed records, 0..9 records.'
+  - Field widths and offsets are specified by the reviewed generator.
+  generator:
+    kind: fixed_records
+    input: orders.dat
+    record_count:
+      min: 0
+      max: 9
+    line_ending: lf
+    fields:
+    - name: id
+      type: integer
+      offset: 0
+      width: 4
+      min: 0
+      max: 9999
+      sign: none
+    - name: name
+      type: choice
+      offset: 4
+      width: 12
+      choices:
+      - AL
+      - BO
+    - name: major
+      type: choice
+      offset: 16
+      width: 3
+      choices:
+      - AA
+      - BB
+    - name: courses
+      type: integer
+      offset: 19
+      width: 2
+      min: 0
+      max: 99
+      sign: none
+toolchains:
+  cobol:
+    image: docker.io/dagui0/gnucobol@sha256:df109e3fadf5a562c9abddf115e176b982b02789e8fc73a2922c1e661f313f0b
+    version: 3.1.2.0
+  python:
+    image: docker.io/library/python@sha256:8859bd6ca943079262c27e38b7119cdacede77c463139a15651dd340087a6cc9
+    version: 3.12.8
+generation:
+  adapter: groq
+  model: qwen/qwen3.8-27b
+  endpoint: https://api.groq.com/openai/v1
+  maximum_attempts: 5
+validation:
+  regression_seed: 1234
+  generated_cases: 2
+  held_out_cases: 2

@@ -127,7 +127,7 @@ def inspect_source(source, copybooks, source_format):
         (r"\bEXEC\s+(SQL|CICS)\b", "embedded SQL/CICS"),
         (r"\bCALL\b", "external or dynamic CALL"),
         (r"\bINVOKE\b|\bCLASS-ID\b", "object-oriented COBOL"),
-        (r"\bACCEPT\b", "interactive/environment ACCEPT"),
+        (r"\bACCEPT\s+[\w-]+\s+FROM\b", "environment/device ACCEPT; plain stdin ACCEPT is supported"),
         (r"\bCURRENT-DATE\b|\bRANDOM\b", "uncontrolled time/randomness"),
         (r"\bREPLACING\b|\bREPLACE\b|>>", "preprocessor replacement/directives"),
     ]:
@@ -193,8 +193,6 @@ def load_plan(manifest: Path):
         destinations.append(destination)
         inputs.append({**file_record(local_path(base, item["fixture"], "fixture")), "sandbox_path": destination})
     outputs = [relative_path(p, "output") for p in sequence(execution["outputs"], "execution.outputs")]
-    if not outputs:
-        raise PlanError("Declare at least one output file; stdout-only programs are outside the initial file-based scope.")
     for index, output in enumerate(outputs):
         if any(overlaps(output.casefold(), p.casefold()) for p in destinations + [entrypoint] + outputs[:index]):
             raise PlanError("Output paths overlap protected inputs, entrypoint, or each other.")
@@ -234,22 +232,29 @@ def load_plan(manifest: Path):
         if not re.fullmatch(r"\d+(?:\.\d+){1,3}", string(tool["version"], "toolchain.version")):
             raise PlanError("Toolchain versions must be exact numeric release versions.")
     generation = mapping(data["generation"], "generation", ("adapter", "model"), ("endpoint", "maximum_attempts"))
-    if generation["adapter"] != "ollama":
-        raise PlanError("Only local Ollama generation is implemented.", "unsupported")
+    if generation["adapter"] not in ("ollama", "huggingface", "groq"):
+        raise PlanError("Generation adapter must be ollama, huggingface or groq.", "unsupported")
     string(generation["model"], "generation.model")
-    if generation["model"].endswith(("-cloud", ":cloud")):
-        raise PlanError("Cloud models are outside the local Ollama contract.", "unsupported")
-    endpoint = generation.get("endpoint", "http://127.0.0.1:11434")
-    url = urlsplit(string(endpoint, "generation.endpoint"))
-    if (url.scheme != "http" or url.hostname not in ("localhost", "127.0.0.1", "::1")
-            or url.username or url.password or url.query or url.fragment or url.path not in ("", "/")):
-        raise PlanError("Ollama endpoint must be a loopback HTTP origin without credentials/path/query.")
-    try:
-        port = url.port
-    except ValueError as exc:
-        raise PlanError("Invalid Ollama port.") from exc
-    if port is not None and not 1 <= port <= 65535:
-        raise PlanError("Invalid Ollama port.")
+    if generation["adapter"] in ("huggingface", "groq"):
+        from .hosted import PROVIDERS
+        required_endpoint = PROVIDERS[generation["adapter"]][0]
+        endpoint = generation.get("endpoint", required_endpoint)
+        if endpoint != required_endpoint:
+            raise PlanError("Hosted generation requires the provider's fixed HTTPS endpoint.")
+    else:
+        if generation["model"].endswith(("-cloud", ":cloud")):
+            raise PlanError("Cloud models are outside the local Ollama contract.", "unsupported")
+        endpoint = generation.get("endpoint", "http://127.0.0.1:11434")
+        url = urlsplit(string(endpoint, "generation.endpoint"))
+        if (url.scheme != "http" or url.hostname not in ("localhost", "127.0.0.1", "::1")
+                or url.username or url.password or url.query or url.fragment or url.path not in ("", "/")):
+            raise PlanError("Ollama endpoint must be a loopback HTTP origin without credentials/path/query.")
+        try:
+            port = url.port
+        except ValueError as exc:
+            raise PlanError("Invalid Ollama port.") from exc
+        if port is not None and not 1 <= port <= 65535:
+            raise PlanError("Invalid Ollama port.")
     if generation.get("maximum_attempts", 5) != 5 or type(generation.get("maximum_attempts", 5)) is not int:
         raise PlanError("maximum_attempts must be 5 (one generation plus four repairs).")
     validation = {"regression_seed": 1234, "generated_cases": 100, "held_out_cases": 100}

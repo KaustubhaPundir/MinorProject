@@ -13,6 +13,8 @@ from .suites import build_suite, check_suite
 from .generation import translate
 from .acceptance import accept_candidate
 from .resume import resume
+from .structured_report import translate_structured
+from .ai_ir import translate_ai_ir
 from .inspection import inspect_run, verified_acceptance, replay_run
 
 
@@ -45,6 +47,17 @@ def main(argv=None):
     generate.add_argument("manifest", type=Path)
     generate.add_argument("--suite-dir", required=True, type=Path)
     generate.add_argument("--output-dir", required=True, type=Path)
+    generate.add_argument("--analysis-first", action="store_true", help="Retain a separate source-analysis call before up to five code attempts")
+    structured = commands.add_parser('structured-translate', help='Translate the strict report subset through a deterministic IR; no model calls')
+    structured.add_argument('manifest', type=Path)
+    structured.add_argument('--suite-dir', required=True, type=Path)
+    structured.add_argument('--output-dir', required=True, type=Path)
+    structured.add_argument('--frontend', choices=['report', 'decimal', 'console'], default='report')
+    ai = commands.add_parser('ai-translate', help='AI proposes and repairs validated IR; trusted emitters generate Python')
+    ai.add_argument('manifest', type=Path)
+    ai.add_argument('--suite-dir', required=True, type=Path)
+    ai.add_argument('--output-dir', required=True, type=Path)
+    ai.add_argument('--frontend', choices=['report', 'decimal', 'console'], default='report')
     accept = commands.add_parser("accept", help="Evaluate a frozen candidate with private held-out cases; fail closed on missing gates")
     accept.add_argument("manifest", type=Path)
     accept.add_argument("--suite-dir", required=True, type=Path)
@@ -73,8 +86,15 @@ def main(argv=None):
         elif args.command == "accept":
             report = accept_candidate(load_plan(args.manifest), args.suite_dir, args.candidate, args.output_dir)
             code = {"accepted": 0, "rejected": 8, "inconclusive": 7, "unsupported": 3}[report["outcome"]]
+        elif args.command == 'ai-translate':
+            report = translate_ai_ir(load_plan(args.manifest), args.suite_dir, args.output_dir, frontend=args.frontend)
+            code = {'awaiting_acceptance': 0, 'unaccepted': 8, 'inconclusive': 7,
+                    'prerequisites_unavailable': 4, 'generation_unavailable': 4}[report['outcome']]
+        elif args.command == 'structured-translate':
+            report = translate_structured(load_plan(args.manifest), args.suite_dir, args.output_dir, frontend=args.frontend)
+            code = {'awaiting_acceptance': 0, 'mismatch': 6, 'inconclusive': 7, 'prerequisites_unavailable': 4}[report['outcome']]
         elif args.command == "translate":
-            report = translate(load_plan(args.manifest), args.suite_dir, args.output_dir)
+            report = translate(load_plan(args.manifest), args.suite_dir, args.output_dir, analysis_first=args.analysis_first)
             code = {"awaiting_acceptance": 0, "unaccepted": 8, "inconclusive": 7,
                     "prerequisites_unavailable": 4, "generation_unavailable": 4}[report["outcome"]]
         elif args.command in ("suite-build", "suite-check"):
