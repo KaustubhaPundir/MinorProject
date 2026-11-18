@@ -29,6 +29,13 @@ MAX_BODY = 256 * 1024
 
 
 def draft(source, frontend, provider, model):
+    if frontend == 'auto':
+        try:
+            result = draft(source, 'general', 'groq', 'openai/gpt-oss-120b')
+        except ValueError:
+            result = draft(source, 'decimal', 'groq', 'openai/gpt-oss-120b')
+        result['input_domain']['description'] = 'Automatically inferred finite test domain; not manually reviewed. Acceptance covers only recorded cases.'
+        return result
     if not isinstance(source, str) or not source.isascii() or not 0 < len(source) <= 128 * 1024:
         raise ValueError('Upload an ASCII COBOL file of at most 128 KiB.')
     if frontend not in ('report', 'decimal', 'console', 'general') or provider not in ('groq', 'ollama', 'huggingface'):
@@ -136,9 +143,20 @@ def prepare(payload, root):
     (root / 'fixtures').mkdir(); (root / 'fixtures/sample.dat').write_bytes(b'')
     path = root / 'manifest.yaml'; path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding='utf-8')
     plan = load_plan(path)
-    if frontend != 'general':
+    if frontend not in ('general', 'auto'):
         {'report': report_extract, 'decimal': decimal_extract, 'console': console_extract}[frontend](source, plan)
     return plan
+
+
+def automatic_frontend(source, plan):
+    """Use a strict frontend only when its complete extractor accepts the source."""
+    for name, extractor in (('console', console_extract), ('report', report_extract), ('decimal', decimal_extract)):
+        try:
+            extractor(source, plan)
+            return name
+        except (ValueError, KeyError, TypeError):
+            continue
+    return 'general'
 
 
 class ConversionServer(ThreadingHTTPServer):
@@ -155,6 +173,8 @@ class ConversionServer(ThreadingHTTPServer):
         try:
             status('Preparing source and test domain')
             plan = prepare(payload, root)
+            frontend = (automatic_frontend((root / 'source.cbl').read_text(), plan)
+                        if payload['frontend'] == 'auto' else payload['frontend'])
             status('Building stable COBOL reference suite')
             suite = root / 'suite'; result = build_suite(plan, suite)
             write(root / 'suite-result.json', result)
@@ -169,8 +189,8 @@ class ConversionServer(ThreadingHTTPServer):
                     errors = f"COBOL compilation failed (exit {compiled['exit_code']}): " + detail
                 status('Stopped', outcome=result['outcome'], message=errors[:1200] or 'Reference suite could not be prepared. See the report download.'); return
             status('AI generation and visible differential testing')
-            result = (translate(plan, suite, root / 'translation') if payload['frontend'] == 'general'
-                      else translate_ai_ir(plan, suite, root / 'translation', frontend=payload['frontend']))
+            result = (translate(plan, suite, root / 'translation') if frontend == 'general'
+                      else translate_ai_ir(plan, suite, root / 'translation', frontend=frontend))
             write(root / 'translation-result.json', result)
             if result['outcome'] != 'awaiting_acceptance':
                 diagnostics = result.get('diagnostics', [])
@@ -250,12 +270,14 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length <= MAX_BODY: raise ValueError('Request exceeds 256 KiB.')
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict): raise ValueError('JSON object required.')
+            if set(payload) == {'source'}:
+                payload = {'source': payload['source'], 'frontend': 'auto', 'provider': 'groq', 'model': 'openai/gpt-oss-120b'}
             path = urlsplit(self.path).path
             if path == '/api/preview':
                 manifest = draft(payload['source'], payload['frontend'], payload['provider'], payload['model'])
                 self.reply({'domain': manifest['input_domain']}); return
             if path != '/api/convert': self.reply({'error': 'Not found'}, 404); return
-            if payload.get('reviewed') is not True or 'domain' not in payload:
+            if payload.get('frontend') != 'auto' and (payload.get('reviewed') is not True or 'domain' not in payload):
                 raise ValueError('Review the generated test domain first.')
             with self.server.lock:
                 if self.server.busy: self.reply({'error': 'A conversion is already running.'}, 409); return

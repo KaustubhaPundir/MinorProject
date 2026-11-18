@@ -29,7 +29,7 @@ flowchart TD
 
 ## Components and ownership
 
-The browser UI runs through the same suite, generation and acceptance modules as the CLI. It accepts uploaded ASCII source, infers fixed/free format from meaningful lines, drafts a reviewed input domain, and starts a background conversion. Only accepted, integrity-verified Python is released as the final conversion download. Provider credentials remain in the server environment.
+The browser UI runs through the same suite, generation and acceptance modules as the CLI. It accepts uploaded ASCII source, infers fixed/free format from meaningful lines, infers a finite input domain labelled automatic and not manually reviewed, and starts a background conversion. Only accepted, integrity-verified Python is released as the final conversion download. Provider credentials remain in the server environment.
 
 General AI generates Python directly for broader supported programs. Strict console, report and decimal frontends instead constrain the source/IR shape and emit readable Python through trusted emitters. AI-proposed IR still requires a real model call; deterministic extraction does not. These paths share exact comparison and acceptance gates.
 
@@ -52,7 +52,7 @@ Visible repair diagnostics include byte offsets, layout/whitespace information a
 | Acceptance evaluator | Required gates and held-out isolation | Final outcome |
 | Evidence store | Artifact retention, identity, and integrity | Run evidence bundle |
 
-Tickets 01–06 implement plan validation, readiness checks, isolated comparison, frozen suites and bounded local Ollama generation/repair. `GenerationAdapter` is a small replaceable interface; independent held-out evaluation now owns candidate freezing, private case storage and final decisions. The Docker executor now supplies trusted descendant syscall tracing, cgroup resource counters and a bounded tmpfs workspace. Missing monitoring evidence still fails closed. See the implemented command guides for current constraints and verification limits.
+Tickets 01â€“06 implement plan validation, readiness checks, isolated comparison, frozen suites and bounded local Ollama generation/repair. `GenerationAdapter` is a small replaceable interface; independent held-out evaluation now owns candidate freezing, private case storage and final decisions. The Docker executor now supplies trusted descendant syscall tracing, cgroup resource counters and a bounded tmpfs workspace. Missing monitoring evidence still fails closed. See the implemented command guides for current constraints and verification limits.
 
 ## Generation interface
 
@@ -93,3 +93,7 @@ Hashes identify artifacts and detect later changes; they do not by themselves en
 ## Explicit follow-up runs
 
 A resume run verifies its rejected parent from raw retained observations, fingerprints the parent and its prior generation history, and rebuilds regression with exposed failures. It preserves the contract and checks that reference observations have not drifted. The generation adapter starts from the previous candidate with bounded visible feedback and the existing per-run stopping policy. Sealed metadata retains prior held-out invocation hashes and seeds across the lineage. Final acceptance excludes them and checks the parent-integrity guard before publishing a terminal decision. The parent is never rewritten. See [follow-up command](resume-command.md).
+
+## Simplified browser input
+
+The browser submits only source text after file selection. The server assigns Groq GPT-OSS 120B, drafts an automatic domain, and chooses console/report/decimal only when a complete strict extractor accepts the source; otherwise it uses General AI. No model/type/domain controls are exposed. The output panel and final integrity/acceptance gates are unchanged. Explicit CLI workflows retain domain configuration.

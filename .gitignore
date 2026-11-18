@@ -38,3 +38,6 @@ Thumbs.db
 
 # Generated distribution archives
 /output/*.zip
+
+# PDF rendering previews and temporary authoring files
+/tmp/pdfs/

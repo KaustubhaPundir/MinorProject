@@ -7,10 +7,23 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
 
-from legacy_diff.web import ConversionServer, draft, prepare
+from legacy_diff.web import ConversionServer, draft, prepare, automatic_frontend
 
 
 class WebTests(unittest.TestCase):
+    def test_automatic_upload_routes_supported_examples(self):
+        examples = [('examples/console/hello.cob', 'console'),
+                    ('examples/console/sum.cob', 'general'),
+                    ('examples/report-writer/report_test.cbl', 'report'),
+                    ('examples/decimal-arithmetic/add-truncate/legacy.cbl', 'decimal')]
+        with tempfile.TemporaryDirectory() as folder:
+            for index, (fixture, expected) in enumerate(examples):
+                source = Path(fixture).read_text()
+                plan = prepare({'source': source, 'frontend': 'auto', 'provider': 'groq', 'model': 'openai/gpt-oss-120b'}, Path(folder) / str(index))
+                self.assertEqual(automatic_frontend(source, plan), expected)
+                self.assertEqual(plan['generation']['adapter'], 'groq')
+                self.assertIn('not manually reviewed', plan['input_domain']['description'])
+
     def payload(self, fixture='examples/report-writer/report_test.cbl', frontend='report'):
         return {'source': Path(fixture).read_text(), 'frontend': frontend,
                 'provider': 'groq', 'model': 'openai/gpt-oss-120b'}
@@ -65,6 +78,19 @@ class WebTests(unittest.TestCase):
                 request = Request(url + '/api/preview', data=json.dumps(self.payload()).encode(),
                                   headers={'X-Conversion-Token': server.token})
                 self.assertEqual(json.loads(urlopen(request).read())['domain']['record_width_bytes'], 31)
+                dispatched = threading.Event()
+                captured = {}
+                def convert(identifier, payload):
+                    captured.update(payload)
+                    dispatched.set()
+                with patch.object(server, 'convert', side_effect=convert):
+                    request = Request(url + '/api/convert', data=json.dumps({'source': Path('examples/console/hello.cob').read_text()}).encode(),
+                                      headers={'X-Conversion-Token': server.token})
+                    self.assertIn('id', json.loads(urlopen(request).read()))
+                    self.assertTrue(dispatched.wait(2))
+                    self.assertEqual(captured['frontend'], 'auto')
+                    self.assertEqual(captured['provider'], 'groq')
+                    self.assertEqual(captured['model'], 'openai/gpt-oss-120b')
             finally:
                 server.shutdown(); server.server_close(); thread.join()
 
